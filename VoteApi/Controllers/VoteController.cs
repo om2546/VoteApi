@@ -84,5 +84,22 @@ namespace VoteApi.Controllers
             return Ok(voteItem);
 
         }
+
+        [HttpPost("cast/{voteOptionId}")]
+        public async Task<ActionResult> CastVote(int voteOptionId)
+        {
+            var voteOption = await _context.VoteOptions.FindAsync(voteOptionId);
+
+            if (voteOption == null)
+            {
+                return NotFound("Vote option not found");
+            }
+
+            voteOption.VoteCount += 1;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { voteOptionId = voteOption.Id, voteCount = voteOption.VoteCount });
+        }
+
     }
 }
