@@ -63,5 +63,26 @@ namespace VoteApi.Controllers
                 totalPages = (int)Math.Ceiling(totalItems / (double)pageSize)
             });
         }
+
+        [HttpGet("{id}")]
+        public async Task<ActionResult<VoteItem>> GetVoteById(int id)
+        {
+
+            if (id <= 0)
+                return BadRequest("Id must be a positive integer.");
+
+
+            var voteItem = await _context.VoteItems
+                    .Include(v => v.VoteOptions)
+                    .AsNoTracking() 
+                    .FirstOrDefaultAsync(v => v.Id == id);
+
+
+            if (voteItem == null)
+                return NotFound();
+
+            return Ok(voteItem);
+
+        }
     }
 }
