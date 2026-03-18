@@ -4,6 +4,15 @@ using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add services to the container.
+builder.Services.AddCors(option =>
+    option.AddPolicy("AllowAngular",
+    policy =>
+    {
+        policy.WithOrigins("http://localhost:4200")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    }));
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -19,6 +28,7 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
+app.UseCors("AllowAngular");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
