@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using VoteApi.Models;
+using VoteApi.Repositories;
 
 namespace VoteApi.Controllers
 {
@@ -8,11 +8,11 @@ namespace VoteApi.Controllers
     [ApiController]
     public class VoteController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IVoteRepository _voteRepository;
 
-        public VoteController(AppDbContext context)
+        public VoteController(IVoteRepository voteRepository)
         {
-            _context = context;
+            _voteRepository = voteRepository;
         }
 
         [HttpPost]
@@ -23,17 +23,9 @@ namespace VoteApi.Controllers
                 return BadRequest("Vote item cannot be null");
             }
 
-            voteItem.CreatedAt = DateTime.UtcNow;
+            var createdVote = await _voteRepository.CreateVoteAsync(voteItem);
 
-            foreach (var option in voteItem.VoteOptions)
-            {
-                option.VoteCount = 0;
-            }
-
-            _context.VoteItems.Add(voteItem);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(CreateVote), new { id = voteItem.Id }, voteItem);
+            return CreatedAtAction(nameof(GetVoteById), new { id = createdVote.Id }, createdVote);
         }
 
         [HttpGet]
@@ -45,18 +37,11 @@ namespace VoteApi.Controllers
             if (pageSize < 1)
                 pageSize = 10;
 
-            var totalItems = await _context.VoteItems.CountAsync();
-
-            var voteItems = await _context.VoteItems
-                .Include(v => v.VoteOptions)
-                .OrderBy(v => v.Id)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
+            var (items, totalItems) = await _voteRepository.GetVotesAsync(page, pageSize);
             
             return Ok(new 
             {
-                items = voteItems,
+                items,
                 page,
                 pageSize,
                 totalItems,
@@ -67,39 +52,28 @@ namespace VoteApi.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<VoteItem>> GetVoteById(int id)
         {
-
             if (id <= 0)
                 return BadRequest("Id must be a positive integer.");
 
-
-            var voteItem = await _context.VoteItems
-                    .Include(v => v.VoteOptions)
-                    .AsNoTracking() 
-                    .FirstOrDefaultAsync(v => v.Id == id);
-
+            var voteItem = await _voteRepository.GetVoteByIdAsync(id);
 
             if (voteItem == null)
                 return NotFound();
 
             return Ok(voteItem);
-
         }
 
         [HttpPost("cast/{voteOptionId}")]
         public async Task<ActionResult> CastVote(int voteOptionId)
         {
-            var voteOption = await _context.VoteOptions.FindAsync(voteOptionId);
+            var voteOption = await _voteRepository.CastVoteAsync(voteOptionId);
 
             if (voteOption == null)
             {
                 return NotFound("Vote option not found");
             }
 
-            voteOption.VoteCount += 1;
-            await _context.SaveChangesAsync();
-
             return Ok(new { voteOptionId = voteOption.Id, voteCount = voteOption.VoteCount });
         }
-
     }
 }

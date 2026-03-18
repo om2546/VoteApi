@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using VoteApi.Models;
+using VoteApi.Repositories;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -23,6 +24,8 @@ builder.Services.AddControllers()
 builder.Services.AddDbContext<AppDbContext>(option =>
     option.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// Register Repository
+builder.Services.AddScoped<IVoteRepository, VoteRepository>();
 
 var app = builder.Build();
 
